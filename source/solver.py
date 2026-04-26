@@ -18,7 +18,7 @@ import networkx as nx
 from reductions import apply_all_reductions
 
 
-class MVCSolver:
+class MVCSolverNaive:
 
     def __init__(self):
         self.nodes_visited: int = 0
@@ -43,6 +43,7 @@ class MVCSolver:
         # Binary search on k (cover size) from 0 upward.
         # In practice for MVC we want the smallest k that succeeds.
         for k in range(n + 1):
+            self.nodes_visited = 0
             cover = set()
             working_graph = G.copy()
 
@@ -77,11 +78,6 @@ class MVCSolver:
 
         if k <= 0:
             return False    # budget exhausted, edges remain
-
-        # --- Component-aware branching (core paper idea) ---
-        components = list(nx.connected_components(G))
-        if len(components) > 1:
-            return self._solve_components(G, cover, k, components)
 
         # --- Pick branching vertex: highest degree ---
         branch_vertex = max(G.degree(), key=lambda x: x[1])[0]
@@ -119,6 +115,74 @@ class MVCSolver:
     # ------------------------------------------------------------------
     # Component-aware solving (paper's key contribution)
     # ------------------------------------------------------------------
+class MVCSolverComponentAware:
+
+    def __init__(self):
+        self.nodes_visited: int = 0
+        self.best_cover: set | None = None
+    
+    def solve(self, G: nx.Graph) -> tuple[set,int]:
+        self.nodes_visited = 0
+        self.best_cover = None
+
+        n = G.number_of_nodes()
+
+        for k in range(n+1):
+            self.nodes_visited = 0
+            cover = set()
+            working_graph = G.copy()
+
+            success=self._branch(working_graph,cover,k)
+            if success:
+                self.best_cover = cover
+                return cover, self.nodes_visited
+        return set(G.nodes()), self.nodes_visited
+    def _branch(self,G: nx.Graph, cover: set, k: int)->bool:
+        self.nodes_visited += 1
+
+        infeasible,k = apply_all_reductions(G,cover,k)
+
+        if infeasible:
+            return False
+        if G.number_of_edges()==0:
+            return True
+        if k<=0: 
+            return False
+        
+        components = list(nx.connected_components(G))
+        if len(components)>1:
+            return self._solve_components(G,cover,k,components)
+        
+        branch_vertex = max(G.degree(), key = lambda x:x[1])[0]
+
+        G1 = G.copy()
+        cover1 = set()
+        G1.remove_node(branch_vertex)
+        cover1.add(branch_vertex)
+        if self._branch(G1, cover1, k - 1):
+            cover.update(cover1)
+            return True
+
+        G2 = G.copy()
+        cover2 = set()
+        neighbors = list(G2.neighbors(branch_vertex))
+        cover2.update(neighbors)
+        new_k = k - len(neighbors)
+ 
+        if new_k >= 0:
+            for nb in neighbors:
+                if nb in G2:
+                    G2.remove_node(nb)
+            if branch_vertex in G2:
+                G2.remove_node(branch_vertex)
+ 
+            if self._branch(G2, cover2, new_k):
+                cover.update(cover2)
+                return True
+ 
+        return False
+ 
+
 
     def _solve_components(
         self,
@@ -182,3 +246,5 @@ class MVCSolver:
                     return True
 
         return False    # no valid allocation found
+    
+MVCSolver = MVCSolverComponentAware
