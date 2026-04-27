@@ -99,24 +99,27 @@ def main():
     # Synthetic test graphs
     # ----------------------------------------------------------------
     test_cases = [
-        ("path_20",
-         generate_synthetic("path", n=20)),
+    # og test graphs
+    ("path_20",
+     generate_synthetic("path", n=20)),
 
-        ("cycle_20",
-         generate_synthetic("cycle", n=20)),
+    ("cycle_20",
+     generate_synthetic("cycle", n=20)),
 
-        ("erdos_renyi_50_005",
-         generate_synthetic("erdos_renyi", n=50, p=0.05)),
+    ("random_regular_3_60",
+     generate_synthetic("random_regular", d=3, n=60)),
 
-        ("erdos_renyi_80_003",
-         generate_synthetic("erdos_renyi", n=80, p=0.03)),
+    ("barabasi_albert_100_2",
+     generate_synthetic("barabasi_albert", n=100, m=2)),
 
-        ("barabasi_albert_100_2",
-         generate_synthetic("barabasi_albert", n=100, m=2)),
+    # caveman variants
+    ("caveman_5_6",
+     nx.caveman_graph(5, 6)),
 
-        ("random_regular_3_60",
-         generate_synthetic("random_regular", d=3, n=60)),
-    ]
+    ("caveman_8_6",
+     nx.caveman_graph(8, 6)),
+
+]
 
     for label, G in test_cases:
         result = run_comparison(G, label)
